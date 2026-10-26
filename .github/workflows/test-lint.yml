@@ -18,9 +18,6 @@ jobs:
         # Linux
         - os: ubuntu-latest
           os-name: 'linux'
-          python-version: "3.10"
-        - os: ubuntu-latest
-          os-name: 'linux'
           python-version: "3.11"
         - os: ubuntu-latest
           os-name: 'linux'
@@ -29,9 +26,6 @@ jobs:
           os-name: 'linux'
           python-version: "3.13"
         # Windows
-        - os: windows-latest
-          os-name: 'windows'
-          python-version: "3.10"
         - os: windows-latest
           os-name: 'windows'
           python-version: "3.11"
@@ -64,7 +58,7 @@ jobs:
           pip install --no-cache-dir -e ".[build]"
       - name: Run Unit tests
         id: tests
-        run: hatch test tests --cover
+        run: hatch test --python ${{ matrix.python-version }} tests --cover
         continue-on-error: false
 
   test-install:
@@ -74,7 +68,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13"]
       # If we ever need to be more frugal, we can run this 1x1   
       # max-parallel: 1
     steps:
@@ -91,8 +85,18 @@ jobs:
 
       - name: Install dependencies for different targets
         run: |
-          pip install -e . --python-version ${{ matrix.python-version }} --target ./manylinux2014_x86_64  --platform manylinux2014_x86_64 --only-binary=:all:
-          pip install -e . --python-version ${{ matrix.python-version }} --target ./manylinux2014_aarch64 --platform manylinux2014_aarch64 --only-binary=:all:
+          for architecture in x86_64 aarch64; do
+            # Accept wheels compatible with glibc 2.28, including older baselines.
+            platforms=()
+            for minor in $(seq 28 -1 17); do
+              platforms+=(--platform "manylinux_2_${minor}_${architecture}")
+            done
+            platforms+=(--platform "manylinux2014_${architecture}")
+            python -m pip install -e . \
+              --python-version ${{ matrix.python-version }} \
+              --target "./manylinux_2_28_${architecture}" \
+              "${platforms[@]}" --only-binary=:all:
+          done
 
   lint:
     name: Lint
@@ -109,7 +113,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies

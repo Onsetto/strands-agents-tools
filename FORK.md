@@ -7,6 +7,10 @@ The runtime source is unchanged from that commit. The fork requires `pillow>=13.
 to use the Pillow 13 security fixes, and adds tests that exercise image reading
 with real PNG, JPEG, GIF, and WebP files.
 
+Pillow 13 requires Python 3.11 or newer. Linux binary-install checks target
+glibc 2.28 on x86_64 and aarch64, accepting compatible wheels built for older
+glibc versions as well.
+
 The package version is `0.2.22+onsetto.1`, a downstream compatibility version
 label. The source is the upstream `main` commit above, rather than the upstream
 `v0.2.22` release. This PEP 440 local version satisfies Nova Act 3.4.187.0's
