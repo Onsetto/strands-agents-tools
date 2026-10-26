@@ -697,16 +697,14 @@ class TestPtyManager:
             read_thread.daemon = True
             read_thread.start()
 
-            # Allow thread to run
-            time.sleep(0.1)
-
-            # Stop the thread
-            pty_mgr.stop_event.set()
-            read_thread.join(timeout=1.0)
-
-            # Verify callback received output
-            assert len(callback_outputs) >= 1  # Should have at least one output
-            assert any("Line 1" in output for output in callback_outputs)
+            try:
+                # The mocked OSError ends the reader after both lines are processed.
+                read_thread.join(timeout=5.0)
+                assert not read_thread.is_alive(), "Output reader did not finish"
+                assert callback_outputs == ["Line 1\n", "Line 2\n"]
+            finally:
+                pty_mgr.stop_event.set()
+                read_thread.join(timeout=1.0)
 
     def test_handle_input(self):
         """Test PtyManager's input handling."""
