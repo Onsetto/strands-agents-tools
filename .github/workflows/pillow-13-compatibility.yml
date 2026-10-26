@@ -1,0 +1,40 @@
+name: Pillow 13 compatibility
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build the fork and download the pinned Pillow wheel
+        run: |
+          python -m pip wheel --no-deps . --wheel-dir dist
+          python -m pip download --no-deps --only-binary=:all: pillow==13.0.0 --dest dist
+      - name: Install with Nova Act using the normal dependency resolver
+        run: |
+          python -m pip install dist/*.whl nova_act==3.4.187.0 pytest
+          python -m pip check
+      - name: Test real images and Nova Act screenshot helpers
+        run: python -m pytest tests/test_image_reader.py tests/test_nova_act_pillow.py -q
+      - name: Preserve the tested wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: pillow-13-compatibility-wheels
+          path: dist/*.whl
+          retention-days: 7

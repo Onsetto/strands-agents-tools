@@ -6,9 +6,36 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PIL import Image
 from strands import Agent
 
 from strands_tools import image_reader
+
+
+@pytest.mark.parametrize("image_format", ["PNG", "JPEG", "GIF", "WEBP"])
+def test_image_reader_with_real_image(tmp_path, image_format):
+    image_path = tmp_path / "image"
+    Image.new("RGB", (8, 4), (20, 40, 60)).save(image_path, format=image_format)
+
+    result = image_reader.image_reader(
+        {"toolUseId": "read-image", "input": {"image_path": str(image_path)}}
+    )
+
+    assert result["status"] == "success"
+    assert result["content"] == [
+        {"image": {"format": image_format.lower(), "source": {"bytes": image_path.read_bytes()}}}
+    ]
+
+
+def test_image_reader_rejects_invalid_image(tmp_path):
+    image_path = tmp_path / "invalid.png"
+    image_path.write_bytes(b"not an image")
+
+    result = image_reader.image_reader(
+        {"toolUseId": "read-image", "input": {"image_path": str(image_path)}}
+    )
+
+    assert result["status"] == "error"
 
 
 @pytest.fixture
